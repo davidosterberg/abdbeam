@@ -1307,7 +1307,8 @@ class Load:
         The Y axis location of the Vz shear force.
     zv: float
         The Z axis location of the Vy shear force.
-
+    description: str
+        Description of the load case
     Examples
     --------
     Creating 3 load cases and associating them to a section:
@@ -1325,7 +1326,7 @@ class Load:
 
 
     def __init__(self, Px_c=0.0, My=0.0, Mz=0.0, Tx=0.0, Vy_s=0.0, Vz_s=0.0,
-             Px=0.0, yp=0.0, zp=0.0, Vy=0.0, Vz=0.0, yv=0.0, zv=0.0):
+             Px=0.0, yp=0.0, zp=0.0, Vy=0.0, Vz=0.0, yv=0.0, zv=0.0, description=''):
         """
         Instantiates a section Load.
 
@@ -1375,11 +1376,12 @@ class Load:
         self.Vz = Vz
         self.yv = yv
         self.zv = zv
+        self.description = description
 
 
     def __repr__(self):
-        return ('{}({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})'
-                .format(self.__class__.__name__, self.Px_c, self.My, self.Mz,
+        return ('{}({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})'
+                .format(self.__class__.__name__, self.description, self.Px_c, self.My, self.Mz,
                 self.Tx, self.Vy_s, self.Vz_s, self.Px, self.yp, self.zp,
                 self.Vy, self.Vz, self.yv, self.zv))
 

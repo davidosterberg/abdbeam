@@ -376,17 +376,18 @@ class Laminate(Material):
         mts[1].calculate_properties()
     """
 
-    def __init__(self):
+    def __init__(self, description=''):
         super().__init__(0.0)
         self.t = 0.0
         self.plies = list()
         self.ply_materials = dict()
         self.abd = np.zeros((6,6), float)
         self.symmetry = 'T'
+        self.description = description
 
 
     def __repr__(self):
-        return ('{}()'.format(self.__class__.__name__))
+        return ('{}("{}")'.format(self.__class__.__name__, self.description))
 
 
     def calculate_properties(self):
