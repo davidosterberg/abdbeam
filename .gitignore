@@ -1,3 +1,4 @@
+*.pyc
 abdbeam.egg-info/
 build/
 dist/
