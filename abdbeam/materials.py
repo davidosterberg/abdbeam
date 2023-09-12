@@ -71,6 +71,27 @@ class Material:
         """
         self.abd = np.linalg.inv(self.abd_c)
 
+    def strains_midplane(self, loads):
+        """
+        Calculate the midplane strains and curvatures.
+        Needed for calculating lamina stresses and strains
+
+        Parameters
+        ----------
+        loads:  numpy.array (6,), float
+                Plate loads on the form [Nx, Ny, Nyx, Mx, My, Mz]
+
+        Returns
+        -------
+        eps0:   numpy.array (3,), float
+                The midplane strains [eps0_x, eps0_y, gamma0_xy]
+        k:      numpy.array (3,), float
+                The midplane curvatures [k_x, k_y, k_xy]
+        """
+        eps0_k = (self.abd_c @ loads.T).T
+        eps0 = eps0_k[:3]
+        k = eps0_k[3:]
+        return eps0, k
 
 class Isotropic(Material):
     """
@@ -158,6 +179,34 @@ class Isotropic(Material):
         abd_c[4,3] = -v*12 / (E*t**3)
         abd_c[5,5] = 24*(1+v) / (E*t**3)
         self.abd = np.linalg.inv(abd_c)
+        ql = np.zeros((3,3), float)
+        ql[0, 0] = E / (1 - (v * v))
+        ql[1, 1] = E / (1 - (v * v))
+        ql[0, 1] = (E * v) / (1 - (v * v))
+        ql[1, 0] = ql[0, 1]
+        ql[2, 2] = E / 2 / (1 + v)
+        self.ql = ql
+
+
+    def stress_z(self, z, load):
+        ql = self.ql
+        eps0, k = self.strains_midplane(load)
+        sig = (ql @ eps0.T + z*ql @ k.T).T
+        return sig
+
+
+    def stress_top(self, load):
+        return self.stress_z(self.t/2, load)
+
+
+    def stress_bottom(self, load):
+        return self.stress_z(-self.t/2, load)
+
+
+    def stress_eq_max(self, load):
+        top = von_mises_stress(self.stress_top(load))
+        bottom = von_mises_stress(self.stress_bottom(load))
+        return max(top, bottom)
 
 
 class ShearConnector(Material):
@@ -329,7 +378,6 @@ class Laminate(Material):
         The material 6x6 stiffness matrix based on CLT (Classical Laminate
         Theory).
 
-
     Methods
     -------
     calculate_properties()
@@ -439,3 +487,45 @@ class Laminate(Material):
             abd[3:6, 0:3] = 0.0
         self.abd = abd
         self.abd_c = np.linalg.inv(abd) # The compliance [abd_c] matrix
+        self.plies_ql = plies_ql
+        self.h = h
+
+
+    def strain_ply(self, i, load):
+        eps0, k = self.strains_midplane(load)
+        z = 0.5*(self.h[i] + self.h[i+1])
+        return eps0 + z*k  # Eq. 6.6 in Agarwar
+
+
+    def strain_ply_fiber_direction(self, i, load):
+        strain = self.strain_ply(i, load)
+        theta, mat = self.plies[i]
+        c = np.cos(theta * math.pi / 180)
+        s = np.sin(theta * math.pi / 180)
+        T2 = np.array([[c**2, s**2, s*c],[s**2, c**2, -s*c], [-2*s*c, 2*s*c, c**2-s**2]])
+        return (T2 @ strain.T).T # Eq. 5.88 in Agarwar
+
+
+    def stress_ply(self, i, load):
+        eps0, k = self.strains_midplane(load)
+        z = 0.5*(self.h[i] + self.h[i+1])
+        ql = self.plies_ql[i]
+        sig = (ql @ eps0.T + z*ql @ k.T).T
+        return sig
+
+
+    def stress_ply_fiber_direction(self, i, load):
+        stress = self.stress_ply(i, load)
+        theta, mat = self.plies[i]
+        c = np.cos(theta * math.pi / 180)
+        s = np.sin(theta * math.pi / 180)
+        T1 = np.array([[c**2, s**2, 2*s*c],[s**2, c**2, -2*s*c], [-s*c, s*c, c**2-s**2]])
+        return (T1 @ stress.T).T # Eq. 5.86 in Agarwar
+
+
+
+def von_mises_stress(stress):
+    sx = stress[0]
+    sy = stress[1]
+    sxy = stress[2]
+    return (sx**2 - sx*sy + sy**2 + 3*sxy**2)**0.5
