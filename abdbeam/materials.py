@@ -24,6 +24,8 @@ class Material:
     abd : numpy.ndarray
         The material 6x6 stiffness matrix based on CLT (Classical Laminate
         Theory).
+    density: float
+        The mass density of the material.
     description: str
         The description of the material.
 
@@ -36,7 +38,7 @@ class Material:
     """
 
 
-    def __init__(self, t, abd_c=np.zeros((6,6), float), description=''):
+    def __init__(self, t, abd_c=np.zeros((6,6), float), density=0.0, description=''):
         """
         Creates a material instance.
 
@@ -47,12 +49,15 @@ class Material:
         abd_c : numpy.ndarray, default np.zeros((6,6), float)
             The material 6x6 compliance matrix based on CLT (Classical Laminate
             Theory).
+        density: float
+            The mass density of the material.
         description: str, default ''
             The description of the material.
         """
         self.t = t
         self.abd = np.zeros((6,6), float)
         self.abd_c = abd_c
+        self.density = density
         self.description = description
 
 
@@ -84,6 +89,8 @@ class Isotropic(Material):
         The Young Modulus of the material.
     v: float
         The Poisson Ratio of the material.
+    density: float
+        The mass density of the material.
     description: str
         The description of the material.
     abd_c : numpy.ndarray
@@ -109,7 +116,7 @@ class Isotropic(Material):
     """
 
 
-    def __init__(self, t, E, v, description=''):
+    def __init__(self, t, E, v, density=0.0, description=''):
         """
         Creates an isotropic material instance.
 
@@ -121,6 +128,8 @@ class Isotropic(Material):
             The Young Modulus of the material.
         v: float
             The Poisson Ratio of the material.
+        density: float
+            The mass density of the material.
         description: str, default ''
             The description of the material.
         """
@@ -129,6 +138,7 @@ class Isotropic(Material):
         self.t = t
         self.E = E
         self.v = v
+        self.density = density
         self.description = description
 
 
@@ -175,6 +185,8 @@ class ShearConnector(Material):
         The thickness of the shear connector material.
     G : float
         The Shear Modulus of the shear connector material.
+    density: float
+        The mass density of the material.
     description: str
         The description of the material.
     abd_c : numpy.ndarray
@@ -200,7 +212,7 @@ class ShearConnector(Material):
     """
 
 
-    def __init__(self, t, G, description=''):
+    def __init__(self, t, G, density=0.0, description=''):
         """
         Creates a shear connector material instance.
 
@@ -210,6 +222,8 @@ class ShearConnector(Material):
             The thickness of the shear connector material.
         G : float
             The Shear Modulus of the shear connector material.
+        density: float
+            The mass density of the material.
         description: str, default ''
             The description of the material.
         """
@@ -217,6 +231,7 @@ class ShearConnector(Material):
         super().__init__(t)
         self.t = t
         self.G = G
+        self.density = density
         self.description = description
 
 
@@ -259,6 +274,10 @@ class PlyMaterial():
         The transverse stiffness of the ply.
     G12: float
         The shear modulus of the ply.
+    v12: float
+        The poission ratio of the ply.
+    density: float
+        The mass density of the ply.
     description: str
         The description of the ply.
 
@@ -270,7 +289,7 @@ class PlyMaterial():
         mts[1].ply_materials[1] = ply_mat
     """
 
-    def __init__(self, t, E1, E2, G12, v12, description=''):
+    def __init__(self, t, E1, E2, G12, v12, density=0.0, description=''):
         """
         Creates a ply material instance.
 
@@ -284,6 +303,10 @@ class PlyMaterial():
             The transverse stiffness of the ply.
         G12: float
             The shear modulus of the ply.
+        v12: float
+            The poission ratio of the ply.
+        density: float
+            The mass density of the ply.
         description: str, default = ''
             The description of the ply.
         """
@@ -293,6 +316,7 @@ class PlyMaterial():
         self.E2 = E2
         self.G12 = G12
         self.v12 = v12
+        self.density = density
         self.description = description
 
 
@@ -328,7 +352,8 @@ class Laminate(Material):
     abd : numpy.ndarray
         The material 6x6 stiffness matrix based on CLT (Classical Laminate
         Theory).
-
+    density: float
+        The mass density of the material.
 
     Methods
     -------
@@ -371,6 +396,7 @@ class Laminate(Material):
         """
 
         self.t = 0
+        self.density = 0.0                                
         abd = np.zeros((6,6), float)
         plies = self.plies[:]
         plies_ql = list()
@@ -384,6 +410,7 @@ class Laminate(Material):
         for angle, ply_mat_id in plies:
             mat = self.ply_materials[ply_mat_id]
             self.t += mat.t
+            self.density += mat.t*mat.density
             E1 = mat.E1
             E2 = mat.E2
             v12 = mat.v12
@@ -417,6 +444,7 @@ class Laminate(Material):
             ql[2, 1] = ql[1, 2]
             ql[2, 0] = ql[0, 2]
             plies_ql.append(ql)
+        self.density /= self.t
         h = np.zeros((len(plies)+1), float)
         h[0] = - self.t / 2
         # Calculate the [abd_c] stiffness matrix

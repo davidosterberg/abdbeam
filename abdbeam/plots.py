@@ -11,7 +11,7 @@ import numpy as np
 from abdbeam.core import _clockwise_angle_from_3_points
 
 def plot_section(section, segment_coord=False, thickness=True, mid_plane=True,
-                 top_bottom=False, centroid=True, shear_center=True,
+                 top_bottom=False, centroid=True, shear_center=True, mass_center=True,
                  origin=True, princ_dir=True, show_axis=True, prop_color='r',
                  pt_size=4, filter_sgs=[], plot_sgs=[], legend=True, title='',
                  figsize=(6.4, 4.8), dpi=80):
@@ -41,6 +41,8 @@ def plot_section(section, segment_coord=False, thickness=True, mid_plane=True,
         If True, will plot the centroid location with an 'o' marker.
     shear_center : bool, default True
         If True, will plot the shear center location with a 'x' marker.
+    mass_center: bool, default True
+        if True, will plot the center of mass location with a box marker. 
     origin : bool, default True
         If True, will plot the section origin location with a '+' marker.
     princ_dir : bool, default True
@@ -99,7 +101,7 @@ def plot_section(section, segment_coord=False, thickness=True, mid_plane=True,
     """
     fig, axs = plt.subplots(1, 1, squeeze=False)
     _plot_section_to_ax(section, axs[0,0], segment_coord, thickness, mid_plane,
-                top_bottom, centroid, shear_center, origin, princ_dir,
+                top_bottom, centroid, shear_center, mass_center, origin, princ_dir,
                 show_axis, prop_color, pt_size, filter_sgs, plot_sgs, legend, title)
     fig.set_size_inches(figsize)
     fig.set_dpi(dpi)
@@ -109,7 +111,7 @@ def plot_section(section, segment_coord=False, thickness=True, mid_plane=True,
 
 def _plot_section_to_ax(section, ax, segment_coord=True, thickness=True,
                 mid_plane=True, top_bottom=True, centroid=True,
-                shear_center=True, origin=True, princ_dir=True, show_axis=True,
+                shear_center=True, mass_center=True, origin=True, princ_dir=True, show_axis=True,
                 prop_color='r', pt_size=4, filter_sgs=[], plot_sgs=[],
                 legend=True, title=''):
     sc = section
@@ -181,6 +183,10 @@ def _plot_section_to_ax(section, ax, segment_coord=True, thickness=True,
     if shear_center:
         ax.plot([sc.ys], [sc.zs], marker='x', markersize=8,
                  color=prop_color, label='Shear Center', linestyle="None")
+    # Plot mass center
+    if mass_center:
+        ax.plot([sc.ym], [sc.zm], marker='s', markersize=8,
+                 color=prop_color, label='Mass Center', linestyle="None")
     if type(title) == str and title != '':
         ax.set_title(title)
     if not show_axis:

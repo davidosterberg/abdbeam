@@ -1,2 +1,4 @@
-
-*.pyc
+abdbeam.egg-info/
+build/
+dist/
+abdbeam/__pycache__/

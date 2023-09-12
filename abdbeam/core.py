@@ -162,21 +162,28 @@ class Section:
         return ('{}()'.format(self.__class__.__name__))
 
 
-    def summary(self):
+    def summary(self, mesh_data=True, density=False, matrices=True):
         """Prints a summary of the section properties."""
         msg = ['']
         msg.append('Section Summary')
         msg.append('===============')
         msg.append('')
-        msg.append('Number of points: {}'.format(len(self.points)))
-        msg.append('Number of segments: {}'.format(len(self.segments)))
-        msg.append('Number of cells: {}'.format(len(self.cells)))
-        msg.append('')
+        if mesh_data:
+            msg.append('Number of points: {}'.format(len(self.points)))
+            msg.append('Number of segments: {}'.format(len(self.segments)))
+            msg.append('Number of cells: {}'.format(len(self.cells)))
+            msg.append('')
         msg.append('Centroid')
         msg.append('--------')
         msg.append('yc\t = {:.8e}'.expandtabs(6).format(self.yc))
         msg.append('zc\t = {:.8e}'.expandtabs(6).format(self.zc))
         msg.append('')
+        if density and self.ym is not None:
+            msg.append('Center of mass')
+            msg.append('--------------')
+            msg.append('ym\t = {:.8e}'.expandtabs(6).format(self.ym))
+            msg.append('zm\t = {:.8e}'.expandtabs(6).format(self.zm))
+            msg.append('')
         msg.append('Shear Center')
         msg.append('------------')
         msg.append('ys\t = {:.8e}'.expandtabs(6).format(self.ys))
@@ -199,21 +206,28 @@ class Section:
         msg.append('Angle\t = {:.8e}'.expandtabs(6).format(
                                                   self.principal_axis_angle))
         msg.append('')
-        msg.append('[P_c] - Beam Stiffness Matrix at the Centroid')
-        msg.append('---------------------------------------------')
-        msg.append(np.array_str(self.p_c))
-        msg.append('')
-        msg.append('[W_c] - Beam Compliance Matrix at the Centroid')
-        msg.append('----------------------------------------------')
-        msg.append(np.array_str(self.w_c))
-        msg.append('')
-        msg.append('[P] - Beam Stiffness Matrix at the Origin')
-        msg.append('-----------------------------------------')
-        msg.append(np.array_str(self.p))
-        msg.append('')
-        msg.append('[W] - Beam Compliance Matrix at the Origin')
-        msg.append('------------------------------------------')
-        msg.append(np.array_str(self.w))
+        if matrices:
+            msg.append('[P_c] - Beam Stiffness Matrix at the Centroid')
+            msg.append('---------------------------------------------')
+            msg.append(np.array_str(self.p_c))
+            msg.append('')
+            msg.append('[W_c] - Beam Compliance Matrix at the Centroid')
+            msg.append('----------------------------------------------')
+            msg.append(np.array_str(self.w_c))
+            msg.append('')
+            msg.append('[P] - Beam Stiffness Matrix at the Origin')
+            msg.append('-----------------------------------------')
+            msg.append(np.array_str(self.p))
+            msg.append('')
+            msg.append('[W] - Beam Compliance Matrix at the Origin')
+            msg.append('------------------------------------------')
+            msg.append(np.array_str(self.w))
+            msg.append('')
+        if density:
+            msg.append('Linear density')
+            msg.append('--------------')
+            msg.append(f'ld\t = {self.weight:.8e}')
+            msg.append('')
         for line in msg:
             print(line)
 
@@ -278,6 +292,23 @@ class Section:
         self.u_Tx, self.u_Tx_pt = self._calc_unit_internal_loads(3)
         self.u_Vy, self.u_Vy_pt = self._calc_unit_internal_loads(4)
         self.u_Vz, self.u_Vz_pt = self._calc_unit_internal_loads(5)
+
+        # Calculate center of mass
+        m = 0.0
+        cog = 0.0
+        for seg in self.segments.values():
+            p_a = self.points[seg.point_a_id]
+            p_b = self.points[seg.point_b_id]
+            cog_seg = 0.5*np.array([p_a.y+p_b.y, p_a.z+p_b.z])
+            m_seg = seg.density*seg.t*seg.bk
+            m += m_seg
+            cog += cog_seg*m_seg
+        self.ym = None
+        self.zm = None
+        if m > 0:
+            cog /= m
+            self.ym = cog[0]
+            self.zm = cog[1]
 
 
     def _calculate_cell_contributions(self):
@@ -1185,6 +1216,7 @@ class Segment:
         self.vk = np.array([[abd_c[0,2], abd_c[0,4]],
                        [abd_c[0,5], abd_c[3,4]],
                        [abd_c[2,5], abd_c[4,5]]])
+        self.density = mat.density
 
 
 class Cell:
